@@ -1,5 +1,5 @@
-import dbConnect from "../../lib/dbConnect";
-import Post from "../../models/Post";
+import dbConnect from "../../lib/mongodb";
+import Post from "../../models/ScheduledPost";
 import Group from "../../models/Group";
 import { scheduleFacebookPost } from "../../lib/social/facebook"; // similarly add for others
 
