@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -60,6 +61,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+import { useSession, signIn, signOut } from "next-auth/react";
 
 export default function Dashboard() {
   return (
@@ -298,7 +301,11 @@ export default function Dashboard() {
                       Export
                     </span>
                   </Button>
-                  <Button size="sm" className="h-7 gap-1">
+                  <Button
+                    onClick={() => signIn("facebook")}
+                    size="sm"
+                    className="h-7 gap-1"
+                  >
                     <PlusCircle className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                       Add Product
