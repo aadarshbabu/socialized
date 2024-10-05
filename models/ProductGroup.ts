@@ -1,16 +1,11 @@
 import mongoose from "mongoose";
+import { SocialAccountSchema } from "./SocialAccountSchema";
 
-const SocialAccountSchema = new mongoose.Schema({
-  platform: String, // Facebook, Instagram, LinkedIn, etc.
-  accessToken: String,
-  userId: String, // Platform-specific user ID
-});
-
-const ProductGroupSchema = new mongoose.Schema({
+export const ProductGroupSchema = new mongoose.Schema({
   name: String,
-  ownerId: String, // Clerk User ID
-  socialAccounts: [SocialAccountSchema],
+  ownerId: String,
+  socialAccounts: [SocialAccountSchema], // Each group can have multiple social accounts
 });
 
-export default mongoose.models.ProductGroup ||
-  mongoose.model("ProductGroup", ProductGroupSchema);
+export default mongoose.models.ProductGroupSchema ||
+  mongoose.model("ProductGroupSchema", ProductGroupSchema);

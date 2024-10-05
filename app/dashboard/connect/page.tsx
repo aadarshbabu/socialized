@@ -1,49 +1,69 @@
 "use client";
-import { signIn } from "next-auth/react";
-import { useState, useEffect, Key } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { signIn, useSession } from "next-auth/react";
+import { useState, Key, useEffect } from "react";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
-  const { sessionId } = useAuth();
+  const { sessionId, userId } = useAuth();
   const [groupId, setGroupId] = useState("");
   const [groups, setGroups] = useState([]);
+  const { data: session } = useSession();
+  const { user } = useUser();
 
-  const fetchGroups = async () => {
-    // Fetch user's groups from the backend
-    const res = await fetch("/api/groups");
+  console.log("sssss", user);
 
-    const data = await res.json();
-    console.log("re", data);
-    setGroups(data.groups);
+  const saveUser = async () => {
+    await fetch(`/api/user`, {
+      method: "POST",
+      body: JSON.stringify({
+        clerkId: userId,
+        accountId: session?.accountId,
+        email: user?.emailAddresses[0].emailAddress,
+        name: user?.fullName,
+      }),
+    });
   };
 
   useEffect(() => {
-    fetchGroups();
-  }, []);
+    if (session) {
+      saveUser();
+    }
+  }, [session]);
+
+  // const fetchGroups = async () => {
+  //   // Fetch user's groups from the backend
+  //   const res = await fetch("/api/groups");
+
+  //   const data = await res.json();
+  //   console.log("re", data);
+  //   setGroups(data.groups);
+  // };
+
+  // useEffect(() => {
+  //   fetchGroups();
+  // }, []);
+
+  // console.log("Session.Data", data);
+  // if (data.data) {
+  //   console.log("Session.Data", data);
+  // }
 
   const addSocialAccount = async (platform: string) => {
-    signIn(platform).then((result) => {
-      console.log("res", result);
-      if (result?.ok) {
-        //   // Assuming NextAuth returns the account details after authentication
-        //   const { accountName, accountId, accessToken } = result;
+    signIn(platform, { callbackUrl: "/dashboard/connect" });
+    // fetchGroups();
 
-        //   // Send the new social account data to the server
-        //   await fetch(`/api/groups/${groupId}/accounts`, {
-        //     method: "POST",
-        //     body: JSON.stringify({
-        //       groupId,
-        //       socialAccount: {
-        //         platform,
-        //         accountName,
-        //         accountId,
-        //         accessToken,
-        //       },
-        //     }),
-        //   });
-        fetchGroups(); // Refresh the group data after adding the account
-      }
-    });
+    // .then((result) => {
+    //   console.log("res", result);
+    //   if (result?.ok) {
+    //   // Assuming NextAuth returns the account details after authentication
+    //   const { accountName, accountId, accessToken } = result;
+
+    //   // Send the new social account data to the server
+    //
+    // Refresh the group data after adding the account
+    //   }
+    // });
   };
 
   return (
@@ -57,19 +77,20 @@ export default function Dashboard() {
           </option>
         ))}
       </select>
-
-      <button onClick={() => addSocialAccount("facebook")}>
-        Connect Facebook
-      </button>
-      <button onClick={() => addSocialAccount("instagram")}>
-        Connect Instagram
-      </button>
-      <button onClick={() => addSocialAccount("linkedin")}>
-        Connect LinkedIn
-      </button>
-      <button onClick={() => addSocialAccount("twitter")}>
-        Connect Twitter
-      </button>
+      <div className=" flex gap-3">
+        <Button onClick={() => addSocialAccount("facebook")}>
+          Connect Facebook
+        </Button>
+        <Button onClick={() => addSocialAccount("instagram")}>
+          Connect Instagram
+        </Button>
+        <Button onClick={() => addSocialAccount("linkedin")}>
+          Connect LinkedIn
+        </Button>
+        <Button onClick={() => addSocialAccount("twitter")}>
+          Connect Twitter
+        </Button>
+      </div>
 
       <div>
         <h2>Groups</h2>

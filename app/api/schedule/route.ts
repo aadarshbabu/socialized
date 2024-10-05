@@ -18,8 +18,8 @@ export async function POST(req: Request) {
     platform,
     accountId,
   });
-  await newPost.save();
-
+  // await newPost.save();
+  //
   //   // Call the appropriate API based on the platform
   //   if (platform === "facebook") {
   //     await scheduleFacebookPost(accountId, content, scheduledTime);

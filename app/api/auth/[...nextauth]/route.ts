@@ -32,7 +32,12 @@
 import NextAuth from "next-auth";
 import Facebook from "next-auth/providers/facebook";
 import { connectToDatabase } from "@/lib/mongodb"; // Your MongoDB connection
-import ProductGroup from "@/models/ProductGroup"; // Your group model
+import User from "@/models/ProductGroup"; // Import the User model
+import { getClerkUserId } from "@/utils/getClerkUrserId";
+import SocialAccountSchema from "@/models/SocialAccountSchema";
+import InstagramProvider from "next-auth/providers/instagram";
+import LinkedInProvider from "next-auth/providers/linkedin";
+import TwitterProvider from "next-auth/providers/twitter";
 
 const handler = NextAuth({
   providers: [
@@ -40,79 +45,66 @@ const handler = NextAuth({
       clientId: process.env.FACEBOOK_CLIENT_ID || "",
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
     }),
+    InstagramProvider({
+      clientId: process.env.INSTAGRAM_CLIENT_ID,
+      clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
+      client: {
+        redirect_uris: ["https://localhost:3000/api/auth/callback/instagram"],
+      },
+      authorization: {
+        // Define the required scopes here
+        params: {
+          scope: "user_profile,user_media",
+        },
+      },
+    }),
+    // LinkedInProvider({
+    //   clientId: process.env.LINKEDIN_CLIENT_ID || "",
+    //   clientSecret: process.env.LINKEDIN_CLIENT_SECRET || "",
+    // }),
+    TwitterProvider({
+      clientId: process.env.TWITTER_CLIENT_ID || "",
+      clientSecret: process.env.TWITTER_CLIENT_SECRET || "",
+      version: "2.0",
+    }),
     // Add more providers if needed
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
-      // Persist the OAuth access_token to the token right after signin
+    async jwt({ token, account }) {
       if (account) {
-        token.accessToken = account.access_token;
-        token.accountId = account.providerAccountId; // Social media account ID
-        token.platform = account.provider; // Platform (e.g., facebook, twitter, etc.)
+        token.accountId = account?.providerAccountId;
       }
       return token;
     },
-    async session({ session, token }) {
-      // Send properties to the client, like an access_token from a provider.
-      session.accessToken = token.accessToken;
+    async session({ session, token }: { session: any; token: any }) {
       session.accountId = token.accountId;
-      session.platform = token.platform;
-
-      // Directly add the social account to the user's group in the database
-      // Assuming that you pass the group ID from the frontend to session callback
-      const groupId = session.groupId; // This can be passed from frontend
-      console.log("g", token);
-
-      if (groupId) {
-        await connectToDatabase();
-
-        const group = await ProductGroup.findById(groupId);
-        if (group) {
-          const socialAccount = {
-            platform: session.platform,
-            accountName: session.user.name, // Profile name, e.g., Facebook Page name
-            accountId: session.accountId,
-            accessToken: token.accessToken,
-          };
-
-          // Check if the account is already linked
-          const accountExists = group.socialAccounts.some(
-            (acc) => acc.accountId === socialAccount.accountId
-          );
-
-          if (!accountExists) {
-            group.socialAccounts.push(socialAccount);
-            await group.save(); // Save the updated group with the new social account
-          }
-        }
-      }
-
       return session;
     },
-    async signIn({ user, account, profile }) {
-      // Extract groupId from the callbackUrl (query parameters)
-      const groupId = null;
+    async signIn({ user, account }) {
+      connectToDatabase();
+      const socialSchema = await SocialAccountSchema.find({
+        accountId: user.id,
+      });
 
-      if (groupId && account) {
-        // Connect to the database
-        await connectToDatabase();
+      if (socialSchema[0]?.accountId === user?.id) {
+        // console.log("true", socialSchema[0]?.accountId, user?.id);
+        return true;
+      }
 
-        // Find the selected group by ID
-        const group = await ProductGroup.findById(groupId);
-
-        if (!group) {
-          throw new Error("Group not found");
-        }
-
-        // Add the social account to the group
-        const socialAccount = {
-          provider: account.provider,
-          accessToken: account.access_token,
-          accountName: profile.name || profile.email,
-          accountId: profile.id || profile.sub,
-        };
-        group.socialAccounts.push(socialAccount);
-        await group.save();
+      const socialAccount = {
+        platform: account?.provider,
+        accessToken: account?.access_token,
+        accountId: user.id,
+        picture: user.image,
+        email: user.email,
+        exp: account?.expires_at,
+      };
+      try {
+        const saveSocialAccount = new SocialAccountSchema(socialAccount);
+        saveSocialAccount.save();
+      } catch (error) {
+        console.log("e", error);
+        return false;
       }
 
       return true;
